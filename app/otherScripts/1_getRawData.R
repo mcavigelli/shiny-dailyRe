@@ -229,10 +229,11 @@ getHospitalData <- function(path, region = "CH", csvBaseName="Hospital_cases", d
 ## Combine openZH data with hospitalization data
 getAllSwissData <- function(stoppingAfter = (Sys.Date() - 1), pathToHospData) {
   openZHData <- getSwissDataFromOpenZH(stopAfter = stoppingAfter)
+  bagData <- read_csv(file.path(pathToHospData, "incidence_data_CH.csv"))
   hospitalData <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "")
   hospitalData_onsets <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_onsets")
   hospitalData_admissions <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_admissions")
-  swissData <- bind_rows(openZHData, hospitalData, hospitalData_onsets, hospitalData_admissions) %>% ungroup()
+  swissData <- bind_rows(openZHData, bagData, hospitalData, hospitalData_onsets, hospitalData_admissions) %>% ungroup()
   return(swissData)
 }
 
@@ -773,7 +774,6 @@ CHrawData <- getAllSwissData(pathToHospData = dataCHHospitalPath) %>%
 # save data
 # pathToCHRawDataSave <- file.path(dataDir, "CH_Raw_data.Rdata")
 # save(CHrawData, file = pathToCHRawDataSave)
-cat(paste("CH"))
 
 ##### European data
 countryList <- c("Austria", "Belgium", "France", "Germany", "Italy",
