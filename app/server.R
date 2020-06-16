@@ -72,7 +72,7 @@ server <- function(input, output, session) {
             i18n()$t("Last Data Updates"),
             HTML(
               dataUpdatesTable(filter(latestData,
-                country == "Switzerland", source %in% c("FOPH")),
+                country == "Switzerland", source %in% c("FOPH", "openZH")),
                 lastCheck, dateFormat = i18n()$t("%Y-%m-%d"))),
               icon = icon("exclamation-circle"),
             color = "purple"
@@ -267,11 +267,9 @@ server <- function(input, output, session) {
   caseDataSwitzerlandPlot <- reactive({
     caseDataSwitzerlandPlot <- rawData %>%
       filter(country == "Switzerland",
-        source %in% c("FOPH"),
+        source %in% c("FOPH", "openZH"),
         data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths")) %>%
-      mutate(
-        data_type = fct_drop(data_type)
-      ) %>%
+      mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source))) %>%
       pivot_wider(names_from = "variable", values_from = "value")
     return(caseDataSwitzerlandPlot)
   })
@@ -296,11 +294,9 @@ server <- function(input, output, session) {
   estimatesSwitzerlandPlot <- reactive({
     estimatesSwitzerlandPlot <- estimatesSwitzerland() %>%
       filter(
-        source %in% c("FOPH"),
+        source %in% c("FOPH", "openZH"),
         data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths")) %>%
-      mutate(
-        data_type = fct_drop(data_type)
-      ) %>%
+      mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source))) %>%
       group_by(data_type) %>%
       filter(
         estimate_type == input$estimation_type_select) %>%
@@ -395,6 +391,8 @@ server <- function(input, output, session) {
       select(source, date) %>%
       distinct() %>%
       mutate(source = sapply(source, i18n()$t,  USE.NAMES = FALSE))
+    
+    legendOnlyTraces <- levels(caseDataCH$data_type)[str_detect(levels(caseDataCH$data_type), "openZH")]
 
     plot <- rEffPlotly(
       caseDataCH,
@@ -404,6 +402,7 @@ server <- function(input, output, session) {
       latestDataCH,
       fixedRangeX = fixedRangeX,
       fixedRangeY = fixedRangeY,
+      legendOnlyTraces = legendOnlyTraces,
       language = input$lang,
       translator = i18n(),
       widgetID = NULL)
@@ -413,9 +412,11 @@ server <- function(input, output, session) {
   output$cantonInteractivePlot <- renderPlotly({
 
     estimates <- estimatesSwitzerlandPlot() %>%
-      filter(!str_detect(region, "grR"))
+      filter(!str_detect(region, "grR"),
+      source == "FOPH")
     caseData <- caseDataSwitzerlandPlot() %>%
-      filter(region %in% estimates$region)
+      filter(region %in% estimates$region,
+      source == "FOPH")
 
     cantonColors <- viridis(length(unique(caseData$region)))
     names(cantonColors) <- unique(caseData$region)

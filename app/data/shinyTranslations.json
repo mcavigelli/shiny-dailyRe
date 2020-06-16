@@ -283,16 +283,52 @@
       "it-ch": "Casi confermati"
     },
     {
+      "en-gb": "Confirmed cases - FOPH",
+      "de-ch": "Bestätigte Fälle - BAG",
+      "fr-ch": "Cas confirmés - OFSP",
+      "it-ch": "Casi confermati - UFSP"
+    },
+    {
+      "en-gb": "Confirmed cases - openZH",
+      "de-ch": "Bestätigte Fälle - openZH",
+      "fr-ch": "Cas confirmés - openZH",
+      "it-ch": "Casi confermati - openZH"
+    },
+    {
       "en-gb": "Hospitalized patients",
       "de-ch": "Hospitalisierte Patienten",
       "fr-ch": "Patients hospitalisés",
       "it-ch": "Pazienti ospedalizzati"
     },
     {
+      "en-gb": "Hospitalized patients - FOPH",
+      "de-ch": "Hospitalisierte Patienten - BAG",
+      "fr-ch": "Patients hospitalisés - OFSP",
+      "it-ch": "Pazienti ospedalizzati - UFSP"
+    },
+    {
+      "en-gb": "Hospitalized patients - openZH",
+      "de-ch": "Hospitalisierte Patienten - openZH",
+      "fr-ch": "Patients hospitalisés - openZH",
+      "it-ch": "Pazienti ospedalizzati - openZH"
+    },
+    {
       "en-gb": "Deaths",
       "de-ch": "Todesfälle",
       "fr-ch": "Décès",
       "it-ch": "Decessi"
+    },
+    {
+      "en-gb": "Deaths - FOPH",
+      "de-ch": "Todesfälle - BAG",
+      "fr-ch": "Décès - OFSP",
+      "it-ch": "Decessi - UFSP"
+    },
+    {
+      "en-gb": "Deaths - openZH",
+      "de-ch": "Todesfälle - openZH",
+      "fr-ch": "Décès - openZH",
+      "it-ch": "Decessi - openZH"
     },
     {
       "en-gb": "Excess deaths",
@@ -347,6 +383,12 @@
       "de-ch": "BAG",
       "fr-ch": "OFSP",
       "it-ch": "UFSP"
+    },
+    {
+      "en-gb": "openZH",
+      "de-ch": "openZH",
+      "fr-ch": "openZH",
+      "it-ch": "openZH"
     },
     {
       "en-gb": "NA",

@@ -6,6 +6,7 @@ library(htmlwidgets)
 library(here)
 library(viridisLite)
 library(shiny.i18n)
+library(shades)
 
 # load data
 dataDir <- here::here("app/data/temp")
@@ -39,38 +40,47 @@ toLowerFirst <- function(string) {
 allCols <- viridis(6)
 plotColors <-  c(
   "Confirmed cases" = allCols[1],
+  "Confirmed cases - FOPH" = allCols[1],
+  "Confirmed cases - openZH" = brightness(allCols[1], delta(-0.3)),
   "Hospitalized patients" = allCols[3],
-  "Deaths" = allCols[5])
+  "Hospitalized patients - FOPH" = allCols[3],
+  "Hospitalized patients - openZH" = brightness(allCols[3], delta(-0.3)),
+  "Deaths" = allCols[5],
+  "Deaths - FOPH" = allCols[5],
+  "Deaths - openZH" = brightness(allCols[5], delta(-0.3)),
+  "Excess deaths" = allCols[6])
 
 # prepare Data
 caseDataPlot <- rawData %>%
   filter(
     country == "Switzerland",
     region == "Switzerland",
-    source %in% c("FOPH"),
+    source %in% c("FOPH", "openZH"),
     data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths")) %>%
   mutate(
     data_type = fct_drop(data_type)
   ) %>%
+  mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source))) %>%
   pivot_wider(names_from = "variable", values_from = "value")
 
 estimates <- estimatesReSum %>%
   filter(
     country == "Switzerland",
     region == "Switzerland",
-    source %in% c("FOPH"),
-    data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths")) %>%
+    source %in% c("FOPH", "openZH"),
+    data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths"),
+    between(date,
+      left = estimatesDates[["Switzerland"]][["Switzerland"]][["start"]][[as.character(data_type[1])]],
+      right = estimatesDates[["Switzerland"]][["Switzerland"]][["end"]][[as.character(data_type[1])]])) %>%
   mutate(
     region = fct_drop(region),
     country = fct_drop(country),
     data_type = fct_drop(data_type)
   ) %>%
+  mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source))) %>%
   group_by(data_type) %>%
   filter(
     estimate_type == "Cori_slidingWindow",
-    between(date,
-      left = estimatesDates[["Switzerland"]][["Switzerland"]][["start"]][[as.character(data_type[1])]],
-      right = estimatesDates[["Switzerland"]][["Switzerland"]][["end"]][[as.character(data_type[1])]]),
   ) %>%
   ungroup()
 
@@ -100,6 +110,7 @@ interventions <- read_csv(file = pathToInterventionData,
     plotTextPosition = col_character())) %>%
   filter(country == "Switzerland")
 
+legendOnlyTraces <- levels(caseDataPlot$data_type)[str_detect(levels(caseDataPlot$data_type), "openZH")]
 
 for (i in translator$languages) {
 
@@ -123,16 +134,15 @@ for (i in translator$languages) {
     lastDataDate = latestDataPlotLocalized,
     fixedRangeX = c(TRUE, TRUE, TRUE),
     fixedRangeY = c(TRUE, TRUE, TRUE),
+    legendOnlyTraces = legendOnlyTraces,
     language = i,
     translator = translator,
     widgetID = "rEffplots")
 
   plotlyPlotV$sizingPolicy$browser$padding <- 0
 
-  plotlyPlotV
-
   htmlwidgets::saveWidget(plotlyPlotV,
-    file.path(plotOutDir, str_c("rEffplotly_", i, ".html")), selfcontained = FALSE, libdir = "lib",
+    file.path(plotOutDir, str_c("rEffplotly_", i, ".html")), selfcontained = TRUE, libdir = "lib",
     title = "Effective reproductive number (Re) in Switzerland")
 
   # write_lines(

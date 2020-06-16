@@ -3,6 +3,7 @@ library(plotly)
 library(viridisLite)
 library(here)
 library(shiny.i18n)
+library(shades)
 
 source("otherScripts/ReffPlotly.R")
 
@@ -87,8 +88,14 @@ allCols <- viridis(6)
 
 plotColors <-  c(
   "Confirmed cases" = allCols[1],
+  "Confirmed cases - FOPH" = allCols[1],
+  "Confirmed cases - openZH" = brightness(allCols[1], delta(-0.3)),
   "Hospitalized patients" = allCols[3],
+  "Hospitalized patients - FOPH" = allCols[3],
+  "Hospitalized patients - openZH" = brightness(allCols[3], delta(-0.3)),
   "Deaths" = allCols[5],
+  "Deaths - FOPH" = allCols[5],
+  "Deaths - openZH" = brightness(allCols[5], delta(-0.3)),
   "Excess deaths" = allCols[6])
 
 fixedRangeX <- c(FALSE, FALSE, FALSE)

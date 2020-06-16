@@ -14,6 +14,7 @@ rEffPlotly <- function(
   endDate = max(caseData$date),
   fixedRangeX = c(TRUE, TRUE, TRUE),
   fixedRangeY = c(TRUE, TRUE, TRUE),
+  legendOnlyTraces = NULL,
   language,
   translator,
   widgetID = "rEffplots") {
@@ -213,6 +214,10 @@ rEffPlotly <- function(
     config(doubleClick = "reset", displaylogo = FALSE, displayModeBar = FALSE,
       locale = locale, scrollZoom = FALSE)
 
+  if(!is.null(legendOnlyTraces)) {
+    plot <- deactivateTraces(plot, traces = legendOnlyTraces, state = "legendonly")
+  }
+
   plot$elementId <- widgetID
 
   return(plot)
@@ -288,7 +293,7 @@ rEffPlotlyRegion <- function(
     Switzerland = translator$t("Switzerland (Total)"))
 
   caseData <- caseData %>%
-    filter(data_type == "Confirmed cases") %>%
+    filter(data_type == "Confirmed cases - FOPH") %>%
     mutate(
       data_type = fct_recode(data_type, !!!newLevels),
       region = recode(region, Switzerland = translator$t("Switzerland (Total)")))
@@ -296,7 +301,7 @@ rEffPlotlyRegion <- function(
   caseDataCH <- filter(caseData, region == translator$t("Switzerland (Total)"))
 
   estimatesPlot <- estimates %>%
-    filter(data_type == "Confirmed cases") %>%
+    filter(data_type == "Confirmed cases - FOPH") %>%
     mutate(
       data_type = fct_recode(data_type, !!!newLevels),
       region = recode(region, Switzerland = translator$t("Switzerland (Total)")))
@@ -796,4 +801,13 @@ makeSlider <- function(zoomRange, x = 0.01, y = 1, anchor = c("top", "left")) {
     ticklen = 0, minorticklen = 0
   )
   return(slider)
+}
+
+deactivateTraces <- function(plotlyPlot, traces, state = "legendonly") {
+  for (i in seq_len(length(plotlyPlot$x$data))) {
+    if (plotlyPlot$x$data[[i]]$name %in% traces) {
+      plotlyPlot$x$data[[i]]$visible <- state
+    }
+  }
+  return(plotlyPlot)
 }
