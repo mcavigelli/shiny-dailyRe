@@ -133,7 +133,7 @@ sumGreaterRegions <- function(chData){
   ) %>% unnest(cols = c(region))
 
   greaterRegionsData <- chData %>%
-    filter(country == "CH") %>%
+    filter(country == "CH", region != "FL") %>%
     left_join(greaterRegions, by = "region") %>%
     ungroup() %>%
     mutate(region = greaterRegion) %>%
@@ -235,7 +235,7 @@ getHospitalData <- function(path, region = "CH", csvBaseName="Hospital_cases", d
 getAllSwissData <- function(stoppingAfter = (Sys.Date() - 1), pathToHospData) {
   openZHData <- getSwissDataFromOpenZH(stopAfter = stoppingAfter)
   bagData <- read_csv(file.path(pathToHospData, "incidence_data_CH.csv"))
-  bagDataGreaterRegions <- sumGreaterRegions(bagData)
+  bagDataGreaterRegions <- sumGreaterRegions(filter(bagData, region != "CH"))
   hospitalData <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "")
   hospitalData_onsets <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_onsets")
   hospitalData_admissions <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_admissions")
@@ -780,8 +780,7 @@ CHrawData <- getAllSwissData(pathToHospData = dataCHHospitalPath) %>%
     region = recode(region, "CH" = "Switzerland", "FL" = "Liechtenstein"),
     country = recode(country, "CH" = "Switzerland", "FL" = "Liechtenstein"))
 
-# calculate greater Regions from BAG data
-
+cat(paste("CH"))
 
 ##### European data
 countryList <- c("Austria", "Belgium", "France", "Germany", "Italy",
@@ -883,7 +882,7 @@ estimateStartDates <- rawData %>%
     !(country == "Switzerland" & region == "Switzerland" & source == "ECDC"),
     variable == "cumul",
     value > 100) %>%
-  group_by(region, country, source, data_type, variable) %>%
+  group_by(region, country, data_type, variable) %>%
   top_n(n = -1, value) %>%
   filter(date == max(date)) %>%
   ungroup() %>%
@@ -900,15 +899,18 @@ delays <- tibble(
 estimateDatesDf <- rawData %>%
   filter(
     !(country == "Switzerland" & region == "Switzerland" & source == "ECDC"),
-    variable == "cumul"
+    variable == "cumul",
+    !is.na(value)
   ) %>%
   group_by(region, country, source, data_type) %>%
   top_n(n = 1, date) %>%
-  arrange(country, region) %>%
+  arrange(country, region, source) %>%
   left_join(delays, by = "data_type") %>%
   ungroup() %>%
   transmute(
-    country = country, region = region, data_type = data_type, estimateEnd = date - delay) %>%
+    country = country, region = region, source = source,
+    data_type = data_type,
+    estimateEnd = date - delay) %>%
   left_join(estimateStartDates, by = c("country", "region"))
 
 estimatesDates <- list()
@@ -917,11 +919,14 @@ for (iCountry in unique(estimateDatesDf$country)) {
   tmpCountry <- filter(estimateDatesDf, country == iCountry)
   for (iRegion in unique(tmpCountry$region)) {
     tmpRegion <- filter(tmpCountry, region == iRegion)
-    tmpListEnd <- tmpRegion$estimateEnd
-    names(tmpListEnd) <- tmpRegion$data_type
-    tmpListStart <- tmpRegion$estimateStart
-    names(tmpListStart) <- tmpRegion$data_type
-    estimatesDates[[iCountry]][[iRegion]] <- list(start = tmpListStart, end = tmpListEnd)
+    for (iSource in unique(tmpRegion$source)) {
+      tmpSource <- filter(tmpRegion, source == iSource)
+      tmpListEnd <- tmpSource$estimateEnd
+      names(tmpListEnd) <- tmpSource$data_type
+      tmpListStart <- tmpSource$estimateStart
+      names(tmpListStart) <- tmpSource$data_type
+      estimatesDates[[iCountry]][[iRegion]][[iSource]] <- list(start = tmpListStart, end = tmpListEnd)
+    }
   }
 }
 

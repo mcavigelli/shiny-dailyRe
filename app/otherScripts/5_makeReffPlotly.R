@@ -69,20 +69,22 @@ estimates <- estimatesReSum %>%
     region == "Switzerland",
     source %in% c("FOPH", "openZH"),
     data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths"),
-    between(date,
-      left = estimatesDates[["Switzerland"]][["Switzerland"]][["start"]][[as.character(data_type[1])]],
-      right = estimatesDates[["Switzerland"]][["Switzerland"]][["end"]][[as.character(data_type[1])]])) %>%
+    estimate_type == "Cori_slidingWindow"
+    ) %>%
   mutate(
     region = fct_drop(region),
     country = fct_drop(country),
     data_type = fct_drop(data_type)
   ) %>%
-  mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source))) %>%
-  group_by(data_type) %>%
+  group_by(source, data_type) %>%
   filter(
-    estimate_type == "Cori_slidingWindow",
+    between(date,
+      left = estimatesDates[["Switzerland"]][["Switzerland"]][[source[1]]][["start"]][[as.character(data_type[1])]],
+      right = estimatesDates[["Switzerland"]][["Switzerland"]][[source[1]]][["end"]][[as.character(data_type[1])]])
   ) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(data_type = as.factor(str_c(as.character(data_type), " - ", source)))
+  
 
 latestDataPlot <- latestData %>%
   ungroup() %>%

@@ -282,11 +282,11 @@ server <- function(input, output, session) {
       mutate(
         data_type = fct_drop(data_type)
       ) %>%
-      group_by(data_type) %>%
+      group_by(source, data_type) %>%
       filter(
         between(date,
-          left = estimatesDates[["Switzerland"]][["Switzerland"]][["start"]][[as.character(data_type[1])]],
-          right = estimatesDates[["Switzerland"]][["Switzerland"]][["end"]][[as.character(data_type[1])]]),
+          left = estimatesDates[["Switzerland"]][["Switzerland"]][[source[1]]][["start"]][[as.character(data_type[1])]],
+          right = estimatesDates[["Switzerland"]][["Switzerland"]][[source[1]]][["end"]][[as.character(data_type[1])]])
       ) %>%
       ungroup()
 
@@ -329,12 +329,12 @@ server <- function(input, output, session) {
       mutate(
         data_type = fct_drop(data_type)
       ) %>%
-      group_by(country, data_type) %>%
+      group_by(country, source, data_type) %>%
       filter(
         estimate_type == input$estimation_type_select,
         between(date,
-          left = estimatesDates[[country[1]]][[country[1]]][["start"]][[as.character(data_type[1])]],
-          right = estimatesDates[[country[1]]][[country[1]]][["end"]][[as.character(data_type[1])]]),
+          left = estimatesDates[[country[1]]][[country[1]]][[source[1]]][["start"]][[as.character(data_type[1])]],
+          right = estimatesDates[[country[1]]][[country[1]]][[source[1]]][["end"]][[as.character(data_type[1])]]),
       ) %>%
       ungroup()
 
@@ -358,11 +358,11 @@ server <- function(input, output, session) {
   estimatesCountry <- lapply(countryList, function(i) {
     estimatesCountry <- estimatesReSum %>%
       filter(country == i, region == i) %>%
-      group_by(data_type) %>%
+      group_by(source, data_type) %>%
       filter(
         between(date,
-          left = estimatesDates[[i]][[i]][["start"]][[as.character(data_type[1])]],
-          right = estimatesDates[[i]][[i]][["end"]][[as.character(data_type[1])]]),
+          left = estimatesDates[[i]][[i]][[source[1]]][["start"]][[as.character(data_type[1])]],
+          right = estimatesDates[[i]][[i]][[source[1]]][["end"]][[as.character(data_type[1])]]),
       ) %>%
       ungroup()
     if (i == "Switzerland") {

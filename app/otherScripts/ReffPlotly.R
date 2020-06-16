@@ -215,7 +215,7 @@ rEffPlotly <- function(
       locale = locale, scrollZoom = FALSE)
 
   if(!is.null(legendOnlyTraces)) {
-    plot <- deactivateTraces(plot, traces = legendOnlyTraces, state = "legendonly")
+    plot <- deactivateTraces(plot, traces = sapply(legendOnlyTraces, translator$t,  USE.NAMES = FALSE), state = "legendonly")
   }
 
   plot$elementId <- widgetID
