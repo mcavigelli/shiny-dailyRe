@@ -142,7 +142,7 @@ for (i in translator$languages) {
   plotlyPlotV$sizingPolicy$browser$padding <- 0
 
   htmlwidgets::saveWidget(plotlyPlotV,
-    file.path(plotOutDir, str_c("rEffplotly_", i, ".html")), selfcontained = TRUE, libdir = "lib",
+    file.path(plotOutDir, str_c("rEffplotly_", i, ".html")), selfcontained = FALSE, libdir = "lib",
     title = "Effective reproductive number (Re) in Switzerland")
 
   # write_lines(
