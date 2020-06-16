@@ -771,9 +771,6 @@ CHrawData <- getAllSwissData(pathToHospData = dataCHHospitalPath) %>%
   mutate(
     region = recode(region, "CH" = "Switzerland", "FL" = "Liechtenstein"),
     country = recode(country, "CH" = "Switzerland", "FL" = "Liechtenstein"))
-# save data
-# pathToCHRawDataSave <- file.path(dataDir, "CH_Raw_data.Rdata")
-# save(CHrawData, file = pathToCHRawDataSave)
 
 ##### European data
 countryList <- c("Austria", "Belgium", "France", "Germany", "Italy",
