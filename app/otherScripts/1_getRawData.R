@@ -120,6 +120,31 @@ calcIncidenceData <- function(data) {
 ########################################
 
 ##### Swiss Data #######
+sumGreaterRegions <- function(chData){
+   greaterRegions <- tribble(
+    ~greaterRegion,             ~region,
+    "grR Lake Geneva Region",       c("VD", "VS", "GE"),
+    "grR Espace Mittelland",        c("BE", "FR", "SO", "NE", "JU"),
+    "grR Northwestern Switzerland", c("BS", "BL", "AG"),
+    "grR Zurich",                   c("ZH"),
+    "grR Eastern Switzerland",      c("GL", "SH", "AR", "AI", "SG", "GR", "TG"),
+    "grR Central Switzerland",      c("LU", "UR", "SZ", "OW", "NW", "ZG"),
+    "grR Ticino",                   c("TI")
+  ) %>% unnest(cols = c(region))
+
+  greaterRegionsData <- chData %>%
+    filter(country == "CH") %>%
+    left_join(greaterRegions, by = "region") %>%
+    ungroup() %>%
+    mutate(region = greaterRegion) %>%
+    dplyr::select(-greaterRegion) %>%
+    group_by(date, region, source, data_type, variable) %>%
+    dplyr::summarize(
+      value = sum(value),
+      country = "CH")
+  return(greaterRegionsData)
+}
+
 getSwissDataFromOpenZH <- function(stopAfter = (Sys.Date() - 1)) {
   openZHurl <- "https://raw.githubusercontent.com/openZH/covid_19/master/COVID19_Fallzahlen_CH_total_v2.csv"
 
@@ -164,27 +189,7 @@ getSwissDataFromOpenZH <- function(stopAfter = (Sys.Date() - 1)) {
       value = sum(value),
       region = "CH")
 
-  greaterRegions <- tribble(
-    ~greaterRegion,             ~region,
-    "grR Lake Geneva Region",       c("VD", "VS", "GE"),
-    "grR Espace Mittelland",        c("BE", "FR", "SO", "NE", "JU"),
-    "grR Northwestern Switzerland", c("BS", "BL", "AG"),
-    "grR Zurich",                   c("ZH"),
-    "grR Eastern Switzerland",      c("GL", "SH", "AR", "AI", "SG", "GR", "TG"),
-    "grR Central Switzerland",      c("LU", "UR", "SZ", "OW", "NW", "ZG"),
-    "grR Ticino",                   c("TI")
-  ) %>% unnest(cols = c(region))
-
-  openZHgreaterRegions <- openZHsum %>%
-    filter(country == "CH") %>%
-    left_join(greaterRegions, by = "region") %>%
-    ungroup() %>%
-    mutate(region = greaterRegion) %>%
-    dplyr::select(-greaterRegion) %>%
-    group_by(date, region, source, data_type, variable) %>%
-    dplyr::summarize(
-      value = sum(value),
-      country = "CH")
+  openZHgreaterRegions <- sumGreaterRegions(openZHsum)
 
   openZHincidence <- bind_rows(openZHcantons, openZHswitzerland, openZHgreaterRegions) %>%
     group_by(data_type, region) %>%
@@ -230,10 +235,13 @@ getHospitalData <- function(path, region = "CH", csvBaseName="Hospital_cases", d
 getAllSwissData <- function(stoppingAfter = (Sys.Date() - 1), pathToHospData) {
   openZHData <- getSwissDataFromOpenZH(stopAfter = stoppingAfter)
   bagData <- read_csv(file.path(pathToHospData, "incidence_data_CH.csv"))
+  bagDataGreaterRegions <- sumGreaterRegions(bagData)
   hospitalData <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "")
   hospitalData_onsets <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_onsets")
   hospitalData_admissions <- getHospitalData(path = pathToHospData, region = "CH", dataTypeSuffix = "_admissions")
-  swissData <- bind_rows(openZHData, bagData, hospitalData, hospitalData_onsets, hospitalData_admissions) %>% ungroup()
+  swissData <- bind_rows(
+    openZHData, bagData, bagDataGreaterRegions, hospitalData, hospitalData_onsets, hospitalData_admissions) %>%
+    ungroup()
   return(swissData)
 }
 
@@ -771,6 +779,9 @@ CHrawData <- getAllSwissData(pathToHospData = dataCHHospitalPath) %>%
   mutate(
     region = recode(region, "CH" = "Switzerland", "FL" = "Liechtenstein"),
     country = recode(country, "CH" = "Switzerland", "FL" = "Liechtenstein"))
+
+# calculate greater Regions from BAG data
+
 
 ##### European data
 countryList <- c("Austria", "Belgium", "France", "Germany", "Italy",

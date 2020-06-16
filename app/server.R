@@ -124,7 +124,7 @@ server <- function(input, output, session) {
           infoBox(width = 12,
             i18n()$t("Last Data Updates"),
             HTML(dataUpdatesTable(filter(latestData,
-              country == "Switzerland", source %in% c("openZH", "FOPH")),
+              country == "Switzerland", source %in% c("FOPH")),
               lastCheck, dateFormat = i18n()$t("%Y-%m-%d"))),
               icon = icon("exclamation-circle"),
             color = "purple"
@@ -240,7 +240,9 @@ server <- function(input, output, session) {
     } else {
       selectedDataType <- input$data_type_select
     }
-    latestDataComp <- filter(latestData, data_type == selectedDataType)
+    latestDataComp <- filter(latestData,
+      data_type == selectedDataType,
+      source %in% unique(caseDataOverview()$source))
     return(latestDataComp)
   })
 
@@ -307,9 +309,9 @@ server <- function(input, output, session) {
 
   caseDataOverview <- reactive({
     caseDataOverview <- rawData %>%
-      filter(data_type == input$data_type_select, region %in% countryList,
-        !(country == "Switzerland" & source == "ECDC")
-      ) %>%
+      filter(
+        data_type == input$data_type_select, region %in% countryList,
+        !(country == "Switzerland" & source %in% c("ECDC", "openZH"))) %>%
       filter(country %in% validEstimates$country, region %in% validEstimates$region) %>%
       mutate(
         data_type = fct_drop(data_type)
@@ -320,8 +322,9 @@ server <- function(input, output, session) {
 
   estimatesOverview <- reactive({
     estimatesOverview <- estimatesReSum %>%
-      filter(data_type == input$data_type_select, region %in% countryList,
-      !(country == "Switzerland" & source == "ECDC")) %>%
+      filter(
+        data_type == input$data_type_select, region %in% countryList,
+        !(country == "Switzerland" & source %in% c("ECDC", "openZH"))) %>%
       filter(country %in% validEstimates$country, region %in% validEstimates$region) %>%
       mutate(
         data_type = fct_drop(data_type)
@@ -345,7 +348,7 @@ server <- function(input, output, session) {
       pivot_wider(names_from = "variable", values_from = "value")
     if (i == "Switzerland") {
       rawDataCountry <- rawDataCountry %>%
-        filter(source != "ECDC")
+        filter(source == "FOPH")
     }
     return(rawDataCountry)
   })
@@ -364,7 +367,7 @@ server <- function(input, output, session) {
       ungroup()
     if (i == "Switzerland") {
       estimatesCountry <- estimatesCountry %>%
-        filter(source != "ECDC")
+        filter(source == "FOPH")
     }
     return(estimatesCountry)
   })
@@ -455,11 +458,14 @@ server <- function(input, output, session) {
   output$greaterRegionInteractivePlot <- renderPlotly({
 
     rEffData <- estimatesSwitzerlandPlot() %>%
-      filter(str_detect(region, "grR") | region == "Switzerland") %>%
+      filter(
+        str_detect(region, "grR") | region == "Switzerland",
+        source == "FOPH") %>%
       mutate(region = str_remove(region, "grR "))
     caseData <- caseDataSwitzerlandPlot() %>%
       mutate(region = str_remove(region, "grR ")) %>%
-      filter(region %in% rEffData$region)
+      filter(region %in% rEffData$region,
+        source == "FOPH")
 
     greaterRegionColors <- viridis(length(unique(caseData$region)))
     names(greaterRegionColors) <- unique(caseData$region)
@@ -509,7 +515,9 @@ server <- function(input, output, session) {
       ungroup() %>%
       dplyr::select(source, date) %>%
       group_by(source) %>%
-      filter(date == max(date)) %>%
+      filter(
+        date == max(date),
+        source %in% unique(caseData$source)) %>%
       distinct()
 
     rEffPlotlyComparison(
@@ -533,7 +541,7 @@ server <- function(input, output, session) {
 
       if (i == "Switzerland") {
         latestDataCountry <- latestData %>%
-          filter(country == i, source != "ECDC")
+          filter(country == i, source == "FOPH")
       } else {
         latestDataCountry <- latestData %>%
         filter(country == i)
