@@ -167,11 +167,11 @@ get_infection_incidence_by_deconvolution <- function(   data_subset,
                                                         scaleIncubation,
                                                         shapeOnsetToCount,
                                                         scaleOnsetToCount,
-                                                        min_chi_squared = 0.5,
+                                                        min_chi_squared = 1.0,
                                                         maximum_iterations = 30,
                                                         verbose = F,
                                                         absolute_max_reporting_delay = 50,
-                                                        smooth_incidence = T) {
+                                                        smooth_incidence = T){
   
   length_initial_time_series <- data_subset %>% 
     dplyr::select(date) %>%
@@ -180,7 +180,6 @@ get_infection_incidence_by_deconvolution <- function(   data_subset,
                                by = "days" )) %>%
     pull() %>%
     length()
-
   
   discretized_distr <- discretize_waiting_time_distr(shape = c(shapeIncubation, shapeOnsetToCount),
                                                      scale = c(scaleIncubation, scaleOnsetToCount),
@@ -219,16 +218,16 @@ get_infection_incidence_by_deconvolution <- function(   data_subset,
                                  by = "days" )) %>%
       fill(c(country, region, source, data_type, variable, value), .direction = "up") %>%
       mutate(value = ifelse(country == "Italy", value, value/7))  %>%
-      mutate( value = if_else(is.na(value), 0, value ))
-
+      mutate( value = if_else(is.na(value), 0, value )) %>%
+      mutate(value = getLOESSCases( dates = date,
+                                            count_data = value ))
   }
-
+  
   first_guess <- smoothed_incidence_data %>% 
     mutate(date = date - first_guess_delay) %>% 
     complete( date = seq.Date( minimal_date, maximal_date, by = "days" )) %>%
     filter( date >=  minimal_date) %>%
     mutate( value = if_else(is.na(value), 0, value ))
-  
   
   final_estimate <- iterate_RL( first_guess$value, 
                                 smoothed_incidence_data$value, 
@@ -275,7 +274,7 @@ get_all_infection_incidence <- function(  data,
                                           scaleIncubation,
                                           shapeOnsetToCount,
                                           scaleOnsetToCount,
-                                          min_chi_squared = 0.5,
+                                          min_chi_squared = 1.0,
                                           maximum_iterations = 30,
                                           verbose = F){
   results <- list(tibble())
@@ -493,8 +492,9 @@ deconvolved_main_data <- get_all_infection_incidence(
   scaleOnsetToCount = scaleOnsetToCount,
   verbose = T)
 
+#ggplot(rawData %>% filter(variable == "incidence")) +
 # ggplot(deconvolved_main_data) +
-#  geom_line(aes(x = date, y = value, colour = country))
+#   geom_line(aes(x = date, y = value, colour = country))
 
 deconvolved_FOPH_hosp_data <- get_all_infection_incidence(
   rawData,
