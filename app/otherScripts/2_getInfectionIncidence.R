@@ -212,9 +212,17 @@ get_infection_incidence_by_deconvolution <- function(   data_subset,
       mutate( value = if_else(is.na(value), 0, value ))
   }
   
-  
-  
-  
+  if ('Excess deaths' %in% data_subset$data_type){
+    smoothed_incidence_data <- data_subset  %>%
+      complete( date = seq.Date( minimal_date,
+                                 maximal_date, 
+                                 by = "days" )) %>%
+      fill(c(country, region, source, data_type, variable, value), .direction = "up") %>%
+      mutate(value = ifelse(country == "Italy", value, value/7))  %>%
+      mutate( value = if_else(is.na(value), 0, value ))
+
+  }
+
   first_guess <- smoothed_incidence_data %>% 
     mutate(date = date - first_guess_delay) %>% 
     complete( date = seq.Date( minimal_date, maximal_date, by = "days" )) %>%
@@ -318,7 +326,6 @@ get_all_infection_incidence <- function(  data,
                                                       maximum_iterations,
                                                       verbose,
                                                       smooth_incidence = smooth)
-          
         })
       
       results <- c(results, results_list)
@@ -485,6 +492,9 @@ deconvolved_main_data <- get_all_infection_incidence(
   shapeOnsetToCount = shapeOnsetToCount,
   scaleOnsetToCount = scaleOnsetToCount,
   verbose = T)
+
+# ggplot(deconvolved_main_data) +
+#  geom_line(aes(x = date, y = value, colour = country))
 
 deconvolved_FOPH_hosp_data <- get_all_infection_incidence(
   rawData,

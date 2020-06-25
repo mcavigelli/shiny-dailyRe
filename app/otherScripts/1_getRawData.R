@@ -747,7 +747,9 @@ getLongECDCData <- function(countries = NULL) {
     longData <- getCountryData(countries, data = longData)
   }
 
-  longData[longData$value < 0, "value"] <- 0
+  longData <-  longData %>%
+    mutate(value = ifelse(value < 0, 0, value))
+  
   return(longData)
 }
 
