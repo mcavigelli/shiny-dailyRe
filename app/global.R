@@ -31,7 +31,7 @@ infection_data_file_path <- file.path(dataDir,  "Deconvolved_infect_data.rds")
 
 pathToPopSizes <- file.path(dataDir, "popSizes.Rdata")
 
-countryList <- readRDS(pathToCountryList)
+countryList <- c("Switzerland")
 
 # helpers
 

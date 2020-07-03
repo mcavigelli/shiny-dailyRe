@@ -90,7 +90,8 @@ right_truncation <- 2
 raw_data <- raw_data %>% 
   group_by(country, region, source, data_type) %>% 
   filter(date <= (max(date) - right_truncation)) %>% 
-  ungroup()
+  ungroup() %>%
+  filter(country == "Switzerland")
 
 deconvolved_main_data <- get_all_infection_incidence(
   raw_data,
