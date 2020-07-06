@@ -93,6 +93,19 @@ raw_data <- raw_data %>%
   ungroup() %>%
   filter(country == "Switzerland")
 
+# filter region with low cumulative cases
+thresholdCumulCases <- 500
+regionsIncluded <- raw_data %>%
+  filter(variable == "cumul", data_type == "Confirmed cases") %>%
+  group_by(region) %>%
+  filter(max(value) >= thresholdCumulCases) %>%
+  dplyr::select(region, country) %>%
+  distinct()
+excludedRegions <- setdiff(unique(raw_data$region), regionsIncluded$region)
+
+raw_data <- raw_data %>%
+  filter(region %in% regionsIncluded$region)
+
 deconvolved_main_data <- get_all_infection_incidence(
   raw_data,
   onset_to_count_empirical_delays = delays_onset_to_count,

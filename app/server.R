@@ -475,7 +475,7 @@ server <- function(input, output, session) {
     estimates <- estimatesSwitzerlandPlot() %>%
       filter(!str_detect(region, "grR"))
     caseData <- caseDataSwitzerlandPlot() %>%
-      filter(region %in% estimates$region)
+      filter(!str_detect(region, "grR"))
 
     cantonColors1 <- viridis(length(unique(caseData$region)))
     names(cantonColors1) <- unique(caseData$region)
