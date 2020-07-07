@@ -1,23 +1,17 @@
 ### Utilities ###
-getLOESSCases <- function(dates, count_data, span = 0.25, truncation = 0) {
-  if (truncation != 0) {
-    dates <- dates[1:(length(dates) - truncation)]
-    count_data <- count_data[1:(length(count_data) - truncation)]
-  }
+getLOESSCases <- function(dates, count_data, span = 0.25) {
   n_pad <- round(length(count_data) * span * 0.5)
   c_data <- data.frame(value = c(rep(0, n_pad), count_data),
                        date_num = c(seq(as.numeric(dates[1]) - n_pad, as.numeric(dates[1]) - 1),
                                     as.numeric(dates)))
+  print(c_data)
   c_data.lo <- loess(value ~ date_num, data = c_data, span = span)
   smoothed <- predict(c_data.lo)
+  print(smoothed)
   smoothed[smoothed < 0] <- 0
   raw_smoothed_counts <- smoothed[(n_pad + 1):length(smoothed)]
   normalized_smoothed_counts <- round(
     raw_smoothed_counts * sum(count_data, na.rm = T) / sum(raw_smoothed_counts, na.rm = T))
-
-  if (truncation != 0) {
-    normalized_smoothed_counts <- append(normalized_smoothed_counts, rep(NA, truncation))
-  }
 
   return(normalized_smoothed_counts)
 }

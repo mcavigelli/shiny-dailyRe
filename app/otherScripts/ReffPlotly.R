@@ -21,8 +21,10 @@ rEffPlotly <- function(
   caseAverage = 1,
   caseNormalize = FALSE,
   caseLoess = FALSE,
+  caseTests = FALSE,
   caseDeconvoluted = FALSE,
   popSizes = NULL,
+  nTests = NULL,
   language,
   translator,
   widgetID = "rEffplots") {
@@ -78,9 +80,16 @@ rEffPlotly <- function(
   names(newLevels) <- sapply(newLevels, translator$t,  USE.NAMES = FALSE)
 
   caseData <- caseData %>%
-    mutate(data_type = fct_recode(data_type, !!!newLevels))
+    mutate(data_type = fct_recode(data_type, !!!newLevels)) %>%
+    left_join(nTests, by = c("country", "region", "date"))
 
   pCasesTitle <- translator$t("New observations")
+
+  if (caseTests) {
+    caseData <- caseData %>%
+      mutate(incidence = incidence / totalTests)
+    pCasesTitle <- str_c(pCasesTitle, " / # tests")
+  }
 
   if (caseNormalize) {
     caseData <- caseData %>%
@@ -127,6 +136,7 @@ rEffPlotly <- function(
         round(incidence, 3), " ", toLowerFirst(data_type),
         if_else(caseNormalize, " / 100'000", ""),
         if_else(caseAverage > 1, str_c(" (", caseAverage, " day average)"), ""),
+        "<br>Number of tests: ", totalTests,
         "<extra></extra>"),
       hovertemplate = "%{text}",
       legendgroup = ~data_type) %>%
@@ -158,6 +168,14 @@ rEffPlotly <- function(
   }
 
   if (caseLoess) {
+    caseDataTrunc <- caseDataTrunc %>%
+      filter(data_type == "Confirmed cases") %>%
+      group_by(country, region, source, data_type) %>%
+      mutate(incidenceLoess = getLOESSCases(date, incidence)) %>%
+      bind_rows(
+        caseDataTrunc %>%
+          filter(data_type != "Confirmed cases")
+      )
     pCases <- pCases %>%
       add_trace(
         data = caseDataTrunc,
@@ -306,6 +324,10 @@ rEffPlotly <- function(
       locale = locale, scrollZoom = FALSE)
 
   plot$elementId <- widgetID
+
+  if (caseTests) {
+    plot <- plotlyShowOnly(plot, "Confirmed cases")
+  }
 
   return(plot)
 }

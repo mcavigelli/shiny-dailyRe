@@ -25,6 +25,29 @@ server <- function(input, output, session) {
   validEstimates <- readRDS(pathToValidEstimates)
   latestData <- readRDS(pathTolatestData)
 
+  # get n tests for Switzerland
+  bagFiles <- list.files("data/BAG",
+    pattern = "*Time_series_tests.csv",
+    full.names = TRUE,
+    recursive = TRUE)
+
+  bagFileDates <- strptime(
+    stringr::str_match(bagFiles, ".*\\/(\\d*-\\d*-\\d*_\\d*-\\d*-\\d*)")[, 2],
+    format = "%Y-%m-%d_%H-%M-%S")
+
+  newestFile <- bagFiles[which(bagFileDates == max(bagFileDates))[1]]
+  nTestsCH <- read_delim(file = newestFile, delim = ";",
+    col_types = cols_only(
+      Datum = col_date(format = ""),
+      `Positive Tests` = col_double(),
+      `Negative Tests` = col_double()
+    )) %>%
+    transmute(
+      date = Datum,
+      country = "Switzerland",
+      region = country,
+      totalTests = `Positive Tests` + `Negative Tests`)
+
   deconvolutedData <- readRDS(file = infection_data_file_path) %>%
     select(-variable) %>%
     mutate(data_type = str_sub(data_type, 11)) %>%
@@ -37,15 +60,8 @@ server <- function(input, output, session) {
       )
 
   rawData <- readRDS(pathToRawData) %>%
-    filter(variable == "incidence", data_type != "Excess deaths") %>%
+    filter(variable == "incidence") %>%
     pivot_wider(names_from = "variable", values_from = "value") %>%
-    group_by(country, region, source, data_type) %>%
-    mutate(incidenceLoess = getLOESSCases(date, incidence, truncation = 2)) %>%
-    bind_rows(
-      readRDS(pathToRawData) %>%
-        filter(variable == "incidence", data_type == "Excess deaths")  %>%
-        pivot_wider(names_from = "variable", values_from = "value")
-    ) %>%
     left_join(deconvolutedData, by = c("country", "region", "source", "data_type", "date"))
 
   #TODO use rds
@@ -88,8 +104,9 @@ server <- function(input, output, session) {
           radioButtons("caseAverage", "Display case data as ...",
             choices = c("daily case numbers" = 1, "Average of last 7 days" = 7),
             selected = 1, inline = FALSE),
+          checkboxInput("caseLoess", "Show smoothed data (Loess Fit)", FALSE),
           HTML("<i>Diagnostics (for R<sub>e</sub> estimation):</i>"),
-          checkboxInput("caseLoess", "Show smoothed data (Loess Fit to daily case data)", FALSE),
+          checkboxInput("caseTests", "Normalize cases by # tests (CH only)", FALSE),
           checkboxInput("caseDeconvoluted", "Show estimated infection times (deconvolution)", FALSE),
         ),
         HTML("<i>Plot 2 - R<sub>e</sub> estimates</i>"),
@@ -461,9 +478,11 @@ server <- function(input, output, session) {
       logCaseYaxis = input$logCases,
       caseAverage = input$caseAverage,
       caseNormalize = input$caseNormalize,
+      caseTests = input$caseTests,
       caseLoess = input$caseLoess,
       caseDeconvoluted = input$caseDeconvoluted,
       popSizes = popSizes,
+      nTests = nTestsCH,
       language = input$lang,
       translator = i18n(),
       widgetID = NULL)
