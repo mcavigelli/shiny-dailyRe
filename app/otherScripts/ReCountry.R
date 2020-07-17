@@ -23,7 +23,7 @@ source(here("app/otherScripts/utils.R"))
 args <- commandArgs(trailingOnly = TRUE)
 # testing
 if (length(args) == 0) {
-  args <- c("DEU")
+  args <- c("BDI")
   warning(str_c("Testing mode!! Country: ", args))
 }
 names(args) <- "country"
@@ -44,7 +44,11 @@ names(args) <- "country"
     continents <- read_csv("app/data/continents.csv", col_types = cols(.default = col_character()))
     popData <- bind_rows(popDataWorldBank, popDataCH) %>%
       select(countryIso3, country, region, populationSize) %>%
-      left_join(continents, by = "countryIso3")
+      full_join(continents, by = "countryIso3") %>%
+      mutate(
+        country = if_else(is.na(country), countryIso3, country),
+        region = if_else(is.na(region), countryIso3, region)
+      )
     saveRDS(popData, file = popDataPath)
   } else {
     popData <- readRDS(popDataPath)
@@ -62,7 +66,8 @@ names(args) <- "country"
     )
 
   # check for changes in country data
-  countryDataPath <- here("app", "data", "countryData", str_c(args["country"], "-Data.rds"))
+  countryDataDir <- here("app", "data", "countryData", countryData$continent[1])
+  countryDataPath <- file.path(countryDataDir, str_c(args["country"], "-Data.rds"))
   if (file.exists(countryDataPath)) {
     countryDataOld <- readRDS(countryDataPath)
     # if new data is null, keep old data (can happen because of error in reading new data)
@@ -84,6 +89,9 @@ names(args) <- "country"
 
     # save updated data
     if (!isTRUE(dataUnchanged)) {
+      if (!file.exists(countryDataDir)) {
+        dir.create(countryDataDir)
+      }
       saveRDS(countryData, file = countryDataPath)
     }
 
@@ -107,7 +115,7 @@ names(args) <- "country"
 
     # get number of test data
     if (args["country"] %in% c("CHE")) {
-      testsDataPath <- here("app", "data", "countryData", str_c(args["country"], "-Tests.rds"))
+      testsDataPath <- file.path(countryDataDir, str_c(args["country"], "-Tests.rds"))
 
       bagFiles <- list.files(here("app", "data", "BAG"),
         pattern = "*Time_series_tests.csv",
@@ -137,7 +145,7 @@ names(args) <- "country"
     }
   }
 
-cleanEnv(keepObjects = c("countryData", "dataUnchanged", "args", "popData"))
+cleanEnv(keepObjects = c("countryDataDir", "countryData", "dataUnchanged", "args", "popData"))
 
 # calculate Re
 # only if (data has changed OR forceUpdate.txt exists) AND countryData is not null
@@ -242,11 +250,11 @@ if (condition) {
           ungroup()
       }
       deconvolvedCountryData <- bind_rows(deconvolvedData)
-      countryDataPath <- here("app", "data", "countryData", str_c(args["country"], "-DeconvolutedData.rds"))
+      countryDataPath <- file.path(countryDataDir, str_c(args["country"], "-DeconvolutedData.rds"))
       saveRDS(deconvolvedCountryData, file = countryDataPath)
 
     # Re Estimation
-      cleanEnv(keepObjects = c("deconvolvedCountryData", "args", "popData"))
+      cleanEnv(keepObjects = c("countryDataDir", "deconvolvedCountryData", "args", "popData"))
       source(here("app/otherScripts/3_utils_doReEstimates.R"))
       pathToAdditionalData <- here("../covid19-additionalData/interventions/")
 
@@ -331,7 +339,7 @@ if (condition) {
           select(popData, country, region, countryIso3),
           by = c("country", "region")
         )
-      countryDataPath <- here("app", "data", "countryData", str_c(args["country"], "-Estimates.rds"))
+      countryDataPath <- file.path(countryDataDir, str_c(args["country"], "-Estimates.rds"))
       saveRDS(countryEstimates, file = countryDataPath)
 } else {
   cat(str_c(args["country"], ": No new data available. Skipping Re calculation.\n"))

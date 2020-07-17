@@ -25,8 +25,8 @@ server <- function(input, output, session) {
   countryList <- tibble(
       countryIso3 = unique(
         str_match(
-          string = list.files(path = pathToCountryData, pattern = ".*-Estimates"),
-          pattern = "(.*)-.*"
+          string = list.files(path = pathToCountryData, pattern = ".*-Estimates", recursive = TRUE),
+          pattern = "/(.*)-.*"
         )[, 2]
         )
     ) %>%
@@ -63,13 +63,19 @@ server <- function(input, output, session) {
       reData <- list(caseData = list(), estimates = list(), estimateRanges = list(), tests = list())
       countries <- unique(
         str_match(
-          string = list.files(path = pathToCountryData, pattern = ".*-Estimates"),
-          pattern = "(.*)-.*"
+          string = list.files(path = pathToCountryData, pattern = ".*-Estimates", recursive = TRUE),
+          pattern = "/(.*)-.*"
         )[, 2])
       for (icountry in countries) {
-        deconvolutedData <- readRDS(file.path(pathToCountryData, str_c(icountry, "-DeconvolutedData.rds")))
-        caseData <- readRDS(file.path(pathToCountryData, str_c(icountry, "-Data.rds")))
-        estimates <- readRDS(file.path(pathToCountryData, str_c(icountry, "-Estimates.rds")))
+        deconvolutedData <- readRDS(
+          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
+          str_c(icountry, "-DeconvolutedData.rds")))
+        caseData <- readRDS(
+          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
+          str_c(icountry, "-Data.rds")))
+        estimates <- readRDS(
+          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
+          str_c(icountry, "-Estimates.rds")))
 
         if (is.null(caseData) | is.null(deconvolutedData) | is.null(estimates)) {
           # this should theoretically never happen (anymore)
