@@ -33,28 +33,18 @@ owncloudcmd -n -s ../data/BAG \
 echo "running R script to extract BAG data & calculate delays ..."
 runRScript format_BAG_data.R
 
-for i in "CHE" "AFG" "ALB" "DZA" "ASM" "AND" "AGO" "ATG" "ARG" "ARM" \
-  "ABW" "AUS" "AUT" "AZE" "BHS" "BHR" "BGD" "BRB" "BLR" "BEL" \
-  "BLZ" "BEN" "BMU" "BTN" "BOL" "BIH" "BWA" "BRA" "VGB" "BRN" \
-  "BGR" "BFA" "BDI" "CPV" "KHM" "CMR" "CAN" "CYM" "CAF" "TCD" \
-  "CHI" "CHL" "CHN" "COL" "COM" "COD" "COG" "CRI" "CIV" "HRV" \
-  "CUB" "CUW" "CYP" "CZE" "DNK" "DJI" "DMA" "DOM" "ECU" "EGY" \
-  "SLV" "GNQ" "ERI" "EST" "SWZ" "ETH" "FRO" "FJI" "FIN" "FRA" \
-  "PYF" "GAB" "GMB" "GEO" "DEU" "GHA" "GIB" "GRC" "GRL" "GRD" \
-  "GUM" "GTM" "GIN" "GNB" "GUY" "HTI" "HND" "HKG" "HUN" "ISL" \
-  "IND" "IDN" "IRN" "IRQ" "IRL" "IMN" "ISR" "ITA" "JAM" "JPN" \
-  "JOR" "KAZ" "KEN" "KIR" "PRK" "KOR" "XKX" "KWT" "KGZ" "LAO" \
-  "LVA" "LBN" "LSO" "LBR" "LBY" "LTU" "LUX" "MAC" "MDG" "MWI" \
-  "MYS" "MDV" "MLI" "MLT" "MHL" "MRT" "MUS" "MEX" "FSM" "MDA" \
-  "MCO" "MNG" "MNE" "MAR" "MOZ" "MMR" "NAM" "NRU" "NPL" "NLD" \
-  "NCL" "NZL" "NIC" "NER" "NGA" "MKD" "MNP" "NOR" "OMN" "PAK" \
-  "PLW" "PAN" "PNG" "PRY" "PER" "PHL" "POL" "PRT" "PRI" "QAT" \
-  "ROU" "RUS" "RWA" "WSM" "SMR" "STP" "SAU" "SEN" "SRB" "SYC" \
-  "SLE" "SGP" "SXM" "SVK" "SVN" "SLB" "SOM" "ZAF" "SSD" "ESP" \
-  "LKA" "KNA" "LCA" "MAF" "VCT" "SDN" "SUR" "SWE" "SYR" "TJK" \
-  "TZA" "THA" "TLS" "TGO" "TON" "TTO" "TUN" "TUR" "TKM" "TCA" \
-  "TUV" "UGA" "UKR" "ARE" "GBR" "USA" "URY" "UZB" "VUT" "VEN" \
-  "VNM" "VIR" "PSE" "YEM" "ZMB" "ZWE"
+for i in "CHE" "DZA" "AGO" "BWA" "BDI" "CMR" "CPV" "CAF" "TCD" "COM" \
+         "MYT" "COG" "COD" "BEN" "GNQ" "ETH" "ERI" "DJI" "GAB" "GMB" \
+         "GHA" "GIN" "CIV" "KEN" "LSO" "LBR" "LBY" "MDG" "MWI" "MLI" \
+         "MRT" "MUS" "MAR" "MOZ" "NAM" "NER" "NGA" "GNB" "REU" "RWA" \
+         "SHN" "STP" "SEN" "SYC" "SLE" "SOM" "ZAF" "ZWE" "SSD" "ESH" \
+         "SDN" "SWZ" "TGO" "TUN" "UGA" "EGY" "TZA" "BFA" "ZMB" "ALB" \
+         "AND" "AZE" "AUT" "ARM" "BEL" "BIH" "BGR" "BLR" "HRV" "CYP" \
+         "CZE" "DNK" "EST" "FRO" "FIN" "ALA" "FRA" "GEO" "DEU" "GIB" \
+         "GRC" "VAT" "HUN" "ISL" "IRL" "ITA" "KAZ" "LVA" "LIE" "LTU" \
+         "LUX" "MLT" "MCO" "MDA" "MNE" "NLD" "NOR" "POL" "PRT" "ROU" \
+         "RUS" "SMR" "SRB" "SVK" "SVN" "ESP" "SJM" "SWE" "TUR" "UKR" \
+         "MKD" "GBR" "GGY" "JEY" "IMN" "XKX" "CHI"
 do
 	runRScript ReCountry.R "$i"
   if [ "$i" = "CHE" ]

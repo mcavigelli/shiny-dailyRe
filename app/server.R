@@ -54,13 +54,15 @@ server <- function(input, output, session) {
   )
 
 
-  reData <- reactivePoll(1000, session,
+  reDataEurope <- reactivePoll(1000, session,
     checkFunc = function() {
       # check estimates (only load data & deconvoluted once script is complete)
-      file.mtime(list.files(path = pathToCountryData, full.names = TRUE, pattern = ".*-Estimates"))
+      file.mtime(
+        list.files(path = file.path(pathToCountryData, "Europe"),
+          full.names = TRUE, pattern = ".*-Estimates", recursive = TRUE))
     },
     valueFunc = function() {
-      reData <- list(caseData = list(), estimates = list(), estimateRanges = list(), tests = list())
+      reDataEurope <- list(caseData = list(), estimates = list(), estimateRanges = list(), tests = list())
       countries <- unique(
         str_match(
           string = list.files(path = pathToCountryData, pattern = ".*-Estimates", recursive = TRUE),
@@ -68,14 +70,11 @@ server <- function(input, output, session) {
         )[, 2])
       for (icountry in countries) {
         deconvolutedData <- readRDS(
-          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
-          str_c(icountry, "-DeconvolutedData.rds")))
+          file.path(pathToCountryData, "Europe", str_c(icountry, "-DeconvolutedData.rds")))
         caseData <- readRDS(
-          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
-          str_c(icountry, "-Data.rds")))
+          file.path(pathToCountryData, "Europe", str_c(icountry, "-Data.rds")))
         estimates <- readRDS(
-          file.path(pathToCountryData, countryList$continent[countryList$countryIso3 == icountry],
-          str_c(icountry, "-Estimates.rds")))
+          file.path(pathToCountryData, "Europe", str_c(icountry, "-Estimates.rds")))
 
         if (is.null(caseData) | is.null(deconvolutedData) | is.null(estimates)) {
           # this should theoretically never happen (anymore)
@@ -98,26 +97,86 @@ server <- function(input, output, session) {
           left_join(deconvolutedData, by = c("country", "region", "source", "data_type", "date")) %>%
           arrange(countryIso3, region, source, data_type, date)
 
-        testsPath <- file.path(pathToCountryData, str_c(icountry, "-Tests.rds"))
+        testsPath <- file.path(pathToCountryData, "Europe", str_c(icountry, "-Tests.rds"))
         if (file.exists(testsPath)) {
-          reData$tests[[icountry]] <- readRDS(testsPath)
+          reDataEurope$tests[[icountry]] <- readRDS(testsPath)
         }
 
-        reData$caseData[[icountry]] <- caseData
-        reData$estimates[[icountry]] <- estimates
-        reData$estimateRanges[[icountry]] <- estimateRanges(
+        reDataEurope$caseData[[icountry]] <- caseData
+        reDataEurope$estimates[[icountry]] <- estimates
+        reDataEurope$estimateRanges[[icountry]] <- estimateRanges(
           caseData,
           minConfirmedCases = 100,
           delays = delaysDf)[[icountry]]
       }
-      return(reData)
+      return(reDataEurope)
+    }
+  )
+
+  reDataAfrica <- reactivePoll(1000, session,
+    checkFunc = function() {
+      # check estimates (only load data & deconvoluted once script is complete)
+      file.mtime(
+        list.files(path = file.path(pathToCountryData, "Africa"),
+          full.names = TRUE, pattern = ".*-Estimates", recursive = TRUE))
+    },
+    valueFunc = function() {
+      reDataAfrica <- list(caseData = list(), estimates = list(), estimateRanges = list(), tests = list())
+      countries <- unique(
+        str_match(
+          string = list.files(path = file.path(pathToCountryData, "Africa"),
+            pattern = ".*-Estimates", recursive = TRUE),
+          pattern = "/(.*)-.*"
+        )[, 2])
+      for (icountry in countries) {
+        deconvolutedData <- readRDS(
+          file.path(pathToCountryData, "Africa", str_c(icountry, "-DeconvolutedData.rds")))
+        caseData <- readRDS(
+          file.path(pathToCountryData, "Africa", str_c(icountry, "-Data.rds")))
+        estimates <- readRDS(
+          file.path(pathToCountryData, "Africa", str_c(icountry, "-Estimates.rds")))
+
+        if (is.null(caseData) | is.null(deconvolutedData) | is.null(estimates)) {
+          # this should theoretically never happen (anymore)
+          next
+        }
+
+        deconvolutedData <- deconvolutedData %>%
+          select(-variable) %>%
+          mutate(data_type = str_sub(data_type, 11)) %>%
+          group_by(date, region, country, source, data_type) %>%
+          summarise(
+            deconvoluted = mean(value),
+            deconvolutedLow = deconvoluted - sd(value),
+            deconvolutedHigh = deconvoluted + sd(value),
+            .groups = "keep"
+          )
+
+        caseData <- caseData %>%
+          pivot_wider(names_from = "variable", values_from = "value") %>%
+          left_join(deconvolutedData, by = c("country", "region", "source", "data_type", "date")) %>%
+          arrange(countryIso3, region, source, data_type, date)
+
+        testsPath <- file.path(pathToCountryData, "Africa", str_c(icountry, "-Tests.rds"))
+        if (file.exists(testsPath)) {
+          reDataAfrica$tests[[icountry]] <- readRDS(testsPath)
+        }
+
+        reDataAfrica$caseData[[icountry]] <- caseData
+        reDataAfrica$estimates[[icountry]] <- estimates
+        reDataAfrica$estimateRanges[[icountry]] <- estimateRanges(
+          caseData,
+          minConfirmedCases = 100,
+          delays = delaysDf)[[icountry]]
+      }
+      return(reDataAfrica)
     }
   )
 
   dataSources <- reactive({
     sourceInfo <- read_csv("data/dataSources.csv", col_types = cols(.default = col_character()))
 
-    dataSources <- bind_rows(reData()$caseData) %>%
+    dataSources <- bind_rows(reDataEurope()$caseData, reDataAfrica()$caseData) %>%
       select(countryIso3, country, source, data_type) %>%
       filter(data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
       left_join(sourceInfo, by = "source") %>%
@@ -143,8 +202,8 @@ server <- function(input, output, session) {
     }
   )
 
-  # country plots
-  lapply(countryList$countryIso3, function(icountry) {
+  # Europe country plots
+  lapply(countryListContinent$Europe$countryIso3, function(icountry) {
     output[[str_c(icountry, "Plot")]] <- renderPlotly({
       validate(
         need(input$estimation_type_select, "loading ...")
@@ -153,9 +212,9 @@ server <- function(input, output, session) {
       updateDataCountry <- updateData()[[icountry]] %>%
         filter(region == icountry)
 
-      reData <- reData()
+      reDataEurope <- reDataEurope()
 
-      caseData <- reData$caseData[[icountry]] %>%
+      caseData <- reDataEurope$caseData[[icountry]] %>%
         filter(
           region == icountry,
           data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
@@ -163,9 +222,9 @@ server <- function(input, output, session) {
           data_type = fct_drop(data_type)
         )
 
-      estimatePlotRanges <- reData$estimateRanges[[icountry]]
+      estimatePlotRanges <- reDataEurope$estimateRanges[[icountry]]
 
-      estimates <- reData$estimates[[icountry]] %>%
+      estimates <- reDataEurope$estimates[[icountry]] %>%
         filter(
           estimate_type == input$estimation_type_select,
           region == icountry,
@@ -222,9 +281,9 @@ server <- function(input, output, session) {
     updateDataCountry <- updateData()[["CHE"]] %>%
       filter(region == "CHE")
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
 
-    caseData <- reData$caseData[["CHE"]] %>%
+    caseData <- reDataEurope$caseData[["CHE"]] %>%
       filter(
         region == "CHE",
         data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
@@ -232,9 +291,9 @@ server <- function(input, output, session) {
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges[["CHE"]]
+    estimatePlotRanges <- reDataEurope$estimateRanges[["CHE"]]
 
-    estimates <- reData$estimates[["CHE"]] %>%
+    estimates <- reDataEurope$estimates[["CHE"]] %>%
       filter(
         estimate_type == input$estimation_type_select,
         region == "CHE",
@@ -261,7 +320,7 @@ server <- function(input, output, session) {
     }
 
     if (input$caseTests) {
-      nTests <- reData$tests$CHE
+      nTests <- reDataEurope$tests$CHE
     } else {
       nTests <- NULL
     }
@@ -289,17 +348,17 @@ server <- function(input, output, session) {
 
   output$CHEregionPlot <- renderPlotly({
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
 
-    caseData <- reData$caseData[["CHE"]] %>%
+    caseData <- reDataEurope$caseData[["CHE"]] %>%
       filter(!str_detect(region, "grR")) %>%
       mutate(
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges[["CHE"]]
+    estimatePlotRanges <- reDataEurope$estimateRanges[["CHE"]]
 
-    estimates <- reData$estimates[["CHE"]] %>%
+    estimates <- reDataEurope$estimates[["CHE"]] %>%
       filter(
         !str_detect(region, "grR"),
         estimate_type == input$estimation_type_select,
@@ -375,18 +434,18 @@ server <- function(input, output, session) {
 
   output$CHEgreaterRegionPlot <- renderPlotly({
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
 
-    caseData <- reData$caseData[["CHE"]] %>%
+    caseData <- reDataEurope$caseData[["CHE"]] %>%
       filter(str_detect(region, "grR") | region == "CHE") %>%
       mutate(
         region = str_remove(region, "grR "),
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges[["CHE"]]
+    estimatePlotRanges <- reDataEurope$estimateRanges[["CHE"]]
 
-    estimates <- reData$estimates[["CHE"]] %>%
+    estimates <- reDataEurope$estimates[["CHE"]] %>%
       filter(
         str_detect(region, "grR") | region == "CHE",
         estimate_type == input$estimation_type_select,
@@ -459,11 +518,83 @@ server <- function(input, output, session) {
       return(plot)
   })
 
+  # Africa country plots
+  lapply(countryListContinent$Africa$countryIso3, function(icountry) {
+    output[[str_c(icountry, "Plot")]] <- renderPlotly({
+      validate(
+        need(input$estimation_type_select, "loading ...")
+      )
+
+      updateDataCountry <- updateData()[[icountry]] %>%
+        filter(region == icountry)
+
+      reDataAfrica <- reDataAfrica()
+
+      caseData <- reDataAfrica$caseData[[icountry]] %>%
+        filter(
+          region == icountry,
+          data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
+        mutate(
+          data_type = fct_drop(data_type)
+        )
+
+      estimatePlotRanges <- reDataAfrica$estimateRanges[[icountry]]
+
+      estimates <- reDataAfrica$estimates[[icountry]] %>%
+        filter(
+          estimate_type == input$estimation_type_select,
+          region == icountry,
+          data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
+        mutate(
+          region = fct_drop(region),
+          country = fct_drop(country),
+          data_type = fct_drop(data_type)
+        ) %>%
+        group_by(data_type) %>%
+        filter(
+          between(date,
+            left = estimatePlotRanges[[icountry]][["start"]][[as.character(data_type[1])]],
+            right = estimatePlotRanges[[icountry]][["end"]][[as.character(data_type[1])]]),
+        ) %>%
+        ungroup()
+
+      interventionsCountry <- interventions()[[icountry]]
+
+      if (!is.null(interventionsCountry)) {
+        interventionsCountry <- mutate(interventionsCountry,
+          text = sapply(text, i18n()$t,  USE.NAMES = FALSE),
+          tooltip =  sapply(tooltip, i18n()$t,  USE.NAMES = FALSE))
+      }
+
+      plot <- rEffPlotly(
+        caseData = caseData,
+        estimates = estimates,
+        interventions = interventionsCountry,
+        plotColors = plotColors,
+        lastDataDate = updateDataCountry,
+        startDate = min(estimates$date) - 14,
+        fixedRangeX = fixedRangeX,
+        fixedRangeY = fixedRangeY,
+        logCaseYaxis = input$logCases,
+        caseAverage = input$caseAverage,
+        caseNormalize = input$caseNormalize,
+        caseLoess = input$caseLoess,
+        caseDeconvoluted = input$caseDeconvoluted,
+        nTests = NULL,
+        translator = i18n(),
+        language = input$lang,
+        widgetID = NULL)
+      return(plot)
+    })
+  })
+
+
   output$WorldComparisonPlot <- renderPlotly({
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
+    reDataAfrica <- reDataAfrica()
 
-    caseData <- bind_rows(reData$caseData) %>%
+    caseData <- bind_rows(reDataEurope$caseData, reDataAfrica$caseData) %>%
       filter(
         data_type == input$data_type_select_world,
         region %in% countryList$countryIso3) %>%
@@ -471,9 +602,9 @@ server <- function(input, output, session) {
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges
+    estimatePlotRanges <- bind_rows(reDataEurope$estimateRanges, reDataAfrica$estimateRanges)
 
-    estimates <- bind_rows(reData$estimates) %>%
+    estimates <- bind_rows(reDataEurope$estimates, reDataEurope$estimates) %>%
       filter(
         data_type == input$data_type_select_world,
         estimate_type == input$estimation_type_select,
@@ -536,9 +667,9 @@ server <- function(input, output, session) {
 
   output$EuropeComparisonPlot <- renderPlotly({
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
 
-    caseData <- bind_rows(reData$caseData) %>%
+    caseData <- bind_rows(reDataEurope$caseData) %>%
       filter(
         data_type == input$data_type_select_europe,
         region %in% countryListContinent[["Europe"]]$countryIso3) %>%
@@ -546,9 +677,9 @@ server <- function(input, output, session) {
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges
+    estimatePlotRanges <- reDataEurope$estimateRanges
 
-    estimates <- bind_rows(reData$estimates) %>%
+    estimates <- bind_rows(reDataEurope$estimates) %>%
       filter(
         data_type == input$data_type_select_europe,
         estimate_type == input$estimation_type_select,
@@ -611,16 +742,16 @@ server <- function(input, output, session) {
 
   output$ZAFregionPlot <- renderPlotly({
 
-    reData <- reData()
+    reDataEurope <- reDataEurope()
 
-    caseData <- reData$caseData[["ZAF"]] %>%
+    caseData <- reDataEurope$caseData[["ZAF"]] %>%
       mutate(
         data_type = fct_drop(data_type)
       )
 
-    estimatePlotRanges <- reData$estimateRanges[["ZAF"]]
+    estimatePlotRanges <- reDataEurope$estimateRanges[["ZAF"]]
 
-    estimates <- reData$estimates[["ZAF"]] %>%
+    estimates <- reDataEurope$estimates[["ZAF"]] %>%
       filter(
         estimate_type == input$estimation_type_select,
         data_type %in% c("Confirmed cases", "Hospitalized patients", "Deaths", "Excess deaths")) %>%
@@ -701,7 +832,7 @@ server <- function(input, output, session) {
       str_c(format(Sys.Date(), "%Y%m%d"), "-ReEstimatesCH.csv")
     },
     content = function(file) {
-      write_csv(reData()$estimates[["CHE"]], file)
+      write_csv(reDataEurope()$estimates[["CHE"]], file)
     }
   )
 
@@ -710,7 +841,7 @@ server <- function(input, output, session) {
       str_c(format(Sys.Date(), "%Y%m%d"), "-ReEstimates.csv")
     },
     content = function(file) {
-      write_csv(bind_rows(reData()$estimates), file)
+      write_csv(bind_rows(reDataEurope()$estimates), file)
     }
   )
 
